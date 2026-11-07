@@ -1,0 +1,110 @@
+name: CD 
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      EC2_HOST: ${{ secrets.EC2_HOST }}
+      EC2_USER: ${{ secrets.EC2_USER }}
+      EC2_PORT: ${{ secrets.EC2_PORT }}
+      APP_DIR: ${{ secrets.APP_DIR }}
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Grant execute permission for Gradle Wrapper
+        run: chmod +x gradlew
+
+      - name: Build executable JAR
+        run: ./gradlew bootJar
+
+      - name: Prepare deployment JAR
+        run: |
+          mkdir -p deploy
+          cp build/libs/*.jar deploy/app.jar
+
+      - name: Configure SSH
+        env:
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          EC2_KNOWN_HOSTS: ${{ secrets.EC2_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/id_ed25519 
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$EC2_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+
+      - name: Create deployment directory
+        run: |
+          ssh -i ~/.ssh/id_ed25519 \
+            -p "$EC2_PORT" \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            "$EC2_USER@$EC2_HOST" \
+            "mkdir -p '$APP_DIR'"
+
+      - name: Upload application files
+        run: |
+          scp -i ~/.ssh/id_ed25519 \
+            -P "$EC2_PORT" \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            deploy/app.jar Dockerfile compose.yml \
+            "$EC2_USER@$EC2_HOST:$APP_DIR/"
+
+      - name: Prepare production configuration
+        env:
+          APPLICATION_PROD_YML: ${{ secrets.APPLICATION_PROD_YML }}
+        run: |
+          test -n "$APPLICATION_PROD_YML" || {
+            echo "APPLICATION_PROD_YML secret is missing"
+            exit 1
+          }
+          umask 077
+          printf '%s\n' "$APPLICATION_PROD_YML" > deploy/application-prod.yml
+
+      - name: Upload production configuration
+        run: |
+          scp -i ~/.ssh/id_ed25519 \
+            -P "$EC2_PORT" \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            deploy/application-prod.yml \
+            "$EC2_USER@$EC2_HOST:$APP_DIR/application-prod.yml"
+
+          ssh -i ~/.ssh/id_ed25519 \
+            -p "$EC2_PORT" \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            "$EC2_USER@$EC2_HOST" \
+            "chmod 600 '$APP_DIR/application-prod.yml'"
+
+      - name: Deploy with Docker Compose
+        run: |
+          ssh -i ~/.ssh/id_ed25519 \
+            -p "$EC2_PORT" \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            "$EC2_USER@$EC2_HOST" \
+            "cd '$APP_DIR' && sudo -n docker compose up -d --build"
