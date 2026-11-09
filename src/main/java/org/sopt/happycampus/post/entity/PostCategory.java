@@ -1,0 +1,15 @@
+package org.sopt.happycampus.post.entity;
+
+public enum PostCategory {
+	REPORT,
+	THESIS,
+	SELF_INTRODUCTION,
+	RESUME,
+	EXAM_MATERIAL,
+	OPEN_UNIVERSITY,
+	FORM,
+	PPT_TEMPLATE,
+	COMPANY_REPORT,
+	COVER_AND_INNER_PAGE,
+	KNOW_HOW;
+}
