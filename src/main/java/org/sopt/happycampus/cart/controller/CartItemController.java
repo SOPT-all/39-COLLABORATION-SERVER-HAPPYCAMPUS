@@ -11,14 +11,13 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import lombok.RequiredArgsConstructor;
+
 @RestController
 @RequestMapping(path="/api/v1")
+@RequiredArgsConstructor
 public class CartItemController implements CartItemControllerDocs {
-	CartItemService cartItemService;
-
-	public CartItemController(CartItemService cartItemService) {
-		this.cartItemService = cartItemService;
-	}
+	private final CartItemService cartItemService;
 
 	@DeleteMapping(path = "/user/{userId}/cartItems/{cartItemId}")
 	public ResponseEntity<SuccessResponse<Void>>  deleteCartItem(

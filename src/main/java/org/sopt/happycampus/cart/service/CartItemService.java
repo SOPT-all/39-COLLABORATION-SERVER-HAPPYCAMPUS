@@ -7,15 +7,13 @@ import org.sopt.happycampus.folder.repository.FolderItemRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import lombok.RequiredArgsConstructor;
+
 @Service
+@RequiredArgsConstructor
 public class CartItemService {
 	private final CartItemRepository cartItemRepository;
 	private final FolderItemRepository folderItemRepository;
-
-	public CartItemService(CartItemRepository cartItemRepository, FolderItemRepository folderItemRepository) {
-		this.cartItemRepository = cartItemRepository;
-		this.folderItemRepository = folderItemRepository;
-	}
 
 	@Transactional
 	public void deleteCartItem(Long userId, Long cartItemId) {
