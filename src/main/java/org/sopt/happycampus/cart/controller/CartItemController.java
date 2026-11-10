@@ -19,7 +19,7 @@ import lombok.RequiredArgsConstructor;
 public class CartItemController implements CartItemControllerDocs {
 	private final CartItemService cartItemService;
 
-	@DeleteMapping(path = "/user/{userId}/cartItems/{cartItemId}")
+	@DeleteMapping(path = "/users/{userId}/cart-items/{cartItemId}")
 	public ResponseEntity<SuccessResponse<Void>>  deleteCartItem(
 		@PathVariable(name = "userId") Long userId,
 		@PathVariable(name = "cartItemId") Long cartItemId) {
