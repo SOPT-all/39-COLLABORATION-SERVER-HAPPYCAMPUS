@@ -3,9 +3,12 @@ package org.sopt.happycampus.cart.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.List;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.sopt.happycampus.cart.entity.CartItemEntity;
 import org.sopt.happycampus.cart.exception.CartItemNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -58,6 +61,23 @@ class CartItemServiceTest {
 		cartItemService.deleteCartItem(1L, 2L);
 
 		assertThat(count("select count(*) from cart_items where id = 2")).isZero();
+	}
+
+	@Test
+	@DisplayName("사용자의 장바구니 항목을 ID 목록으로 조회하고, 중복 ID는 한 번만 조회한다")
+	void getCartItems() {
+		assertThat(cartItemService.getCartItems(1L, List.of(1L, 2L, 2L)))
+			.extracting(CartItemEntity::getId)
+			.containsExactlyInAnyOrder(1L, 2L);
+	}
+
+	@Test
+	@DisplayName("없는 항목이나 다른 사용자의 항목이 하나라도 있으면 CartItemNotFoundException이 발생한다")
+	void getCartItemsNotFound() {
+		assertThatThrownBy(() -> cartItemService.getCartItems(1L, List.of(1L, 999L)))
+			.isInstanceOf(CartItemNotFoundException.class);
+		assertThatThrownBy(() -> cartItemService.getCartItems(2L, List.of(1L)))
+			.isInstanceOf(CartItemNotFoundException.class);
 	}
 
 	@Test
