@@ -4,4 +4,6 @@ import org.sopt.happycampus.folder.entity.FolderItemEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface FolderItemRepository extends JpaRepository<FolderItemEntity, Long> {
+
+	void deleteByCartItemId(Long cartItemId);
 }
