@@ -38,3 +38,8 @@ out/
 
 application.yml
 application-local.yml
+
+# Local database credentials
+/src/main/resources/application-dev.yml
+
+application-prod.yml
