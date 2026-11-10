@@ -12,9 +12,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.jdbc.Sql;
 
 @SpringBootTest
 @ActiveProfiles("test")
+@Sql(scripts = "/sql/cleanup.sql")
 class FolderServiceTest {
 	@Autowired
 	private FolderService folderService;
@@ -24,13 +26,6 @@ class FolderServiceTest {
 
 	@BeforeEach
 	void setUp() {
-		jdbcTemplate.update("delete from folder_items");
-		jdbcTemplate.update("delete from folders");
-		jdbcTemplate.update("delete from cart_items");
-		jdbcTemplate.update("delete from image_url");
-		jdbcTemplate.update("delete from posts");
-		jdbcTemplate.update("delete from users");
-
 		jdbcTemplate.update("insert into users (id, created_at, updated_at) values (1, now(), now()), (2, now(), now())");
 		jdbcTemplate.update("""
 			insert into posts (id, category, title, created_at, updated_at)
