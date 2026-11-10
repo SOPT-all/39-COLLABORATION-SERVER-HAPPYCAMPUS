@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -33,6 +34,19 @@ class CreateFolderRequestTest {
 	@DisplayName("공백 포함 8자 이하의 이름은 통과한다")
 	void validName(String name) {
 		assertThat(validator.validate(new CreateFolderRequest(name))).isEmpty();
+	}
+
+	@Test
+	@DisplayName("앞뒤 공백은 제거하고 가운데 공백은 유지한다")
+	void stripName() {
+		assertThat(new CreateFolderRequest("  자소서 2026  ").name()).isEqualTo("자소서 2026");
+		assertThat(new CreateFolderRequest(null).name()).isNull();
+	}
+
+	@Test
+	@DisplayName("앞뒤 공백을 제거한 길이로 8자를 판단한다")
+	void sizeAfterStrip() {
+		assertThat(validator.validate(new CreateFolderRequest("   12345678   "))).isEmpty();
 	}
 
 	@ParameterizedTest

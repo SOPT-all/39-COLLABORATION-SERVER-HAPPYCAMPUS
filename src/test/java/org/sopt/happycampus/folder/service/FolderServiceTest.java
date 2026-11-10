@@ -127,6 +127,17 @@ class FolderServiceTest {
 	}
 
 	@Test
+	@DisplayName("앞뒤 공백만 다른 이름은 같은 이름으로 보고 FolderNameDuplicatedException이 발생한다")
+	void createFolderDuplicatedNameWithSpaces() {
+		CreateFolderResponse response = folderService.createFolder(1L, new CreateFolderRequest("  자기소개서  "));
+
+		assertThat(response.name()).isEqualTo("자기소개서");
+		assertThatThrownBy(() -> folderService.createFolder(1L, new CreateFolderRequest("자기소개서 ")))
+			.isInstanceOf(FolderNameDuplicatedException.class);
+		assertThat(countFolders(1, "자기소개서")).isEqualTo(1);
+	}
+
+	@Test
 	@DisplayName("다른 사용자는 같은 이름의 폴더를 만들 수 있다")
 	void createFolderSameNameOtherUser() {
 		folderService.createFolder(1L, new CreateFolderRequest("자기소개서"));
