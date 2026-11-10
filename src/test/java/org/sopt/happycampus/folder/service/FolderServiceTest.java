@@ -1,13 +1,18 @@
 package org.sopt.happycampus.folder.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.sopt.happycampus.folder.dto.request.CreateFolderRequest;
+import org.sopt.happycampus.folder.dto.response.CreateFolderResponse;
 import org.sopt.happycampus.folder.dto.response.FolderResponse;
+import org.sopt.happycampus.folder.exception.FolderNameDuplicatedException;
+import org.sopt.happycampus.user.exception.UserNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -93,5 +98,49 @@ class FolderServiceTest {
 	void getFoldersEmpty() {
 		assertThat(folderService.getFolders(1L)).isEmpty();
 		assertThat(folderService.getFolders(999L)).isEmpty();
+	}
+
+	private int countFolders(long userId, String name) {
+		return jdbcTemplate.queryForObject(
+			"select count(*) from folders where user_id = ? and name = ?", Integer.class, userId, name);
+	}
+
+	@Test
+	@DisplayName("폴더를 생성하면 저장되고 생성된 폴더 ID와 이름을 반환한다")
+	void createFolder() {
+		CreateFolderResponse response = folderService.createFolder(1L, new CreateFolderRequest("자기소개서"));
+
+		assertThat(response.folderId()).isNotNull();
+		assertThat(response.name()).isEqualTo("자기소개서");
+		assertThat(folderService.getFolders(1L))
+			.containsExactly(new FolderResponse(response.folderId(), "자기소개서", 0L));
+	}
+
+	@Test
+	@DisplayName("같은 사용자가 같은 이름의 폴더를 만들면 FolderNameDuplicatedException이 발생하고 저장되지 않는다")
+	void createFolderDuplicatedName() {
+		folderService.createFolder(1L, new CreateFolderRequest("자기소개서"));
+
+		assertThatThrownBy(() -> folderService.createFolder(1L, new CreateFolderRequest("자기소개서")))
+			.isInstanceOf(FolderNameDuplicatedException.class);
+		assertThat(countFolders(1, "자기소개서")).isEqualTo(1);
+	}
+
+	@Test
+	@DisplayName("다른 사용자는 같은 이름의 폴더를 만들 수 있다")
+	void createFolderSameNameOtherUser() {
+		folderService.createFolder(1L, new CreateFolderRequest("자기소개서"));
+		folderService.createFolder(2L, new CreateFolderRequest("자기소개서"));
+
+		assertThat(countFolders(1, "자기소개서")).isEqualTo(1);
+		assertThat(countFolders(2, "자기소개서")).isEqualTo(1);
+	}
+
+	@Test
+	@DisplayName("존재하지 않는 사용자가 폴더를 만들면 UserNotFoundException이 발생한다")
+	void createFolderUserNotFound() {
+		assertThatThrownBy(() -> folderService.createFolder(999L, new CreateFolderRequest("자기소개서")))
+			.isInstanceOf(UserNotFoundException.class);
+		assertThat(jdbcTemplate.queryForObject("select count(*) from folders", Integer.class)).isZero();
 	}
 }
