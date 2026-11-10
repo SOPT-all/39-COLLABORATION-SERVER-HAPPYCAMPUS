@@ -1,0 +1,97 @@
+package org.sopt.happycampus.folder.service;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.util.List;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.sopt.happycampus.folder.dto.response.FolderResponse;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.jdbc.Sql;
+
+@SpringBootTest
+@ActiveProfiles("test")
+@Sql(scripts = "/sql/cleanup.sql")
+class FolderServiceTest {
+	@Autowired
+	private FolderService folderService;
+
+	@Autowired
+	private JdbcTemplate jdbcTemplate;
+
+	@BeforeEach
+	void setUp() {
+		jdbcTemplate.update("insert into users (id, created_at, updated_at) values (1, now(), now()), (2, now(), now())");
+		jdbcTemplate.update("""
+			insert into posts (id, category, title, created_at, updated_at)
+			values (1, 'REPORT', '자료1', now(), now()), (2, 'REPORT', '자료2', now(), now()), (3, 'REPORT', '자료3', now(), now())
+			""");
+		jdbcTemplate.update("""
+			insert into cart_items (id, user_id, post_id, created_at)
+			values (1, 1, 1, now()), (2, 1, 2, now()), (3, 2, 3, now())
+			""");
+	}
+
+	private void insertFolder(long id, long userId, String name, String createdAt) {
+		jdbcTemplate.update(
+			"insert into folders (id, user_id, name, created_at, updated_at) values (?, ?, ?, ?, ?)",
+			id, userId, name, createdAt, createdAt);
+	}
+
+	private void insertFolderItem(long id, long folderId, long cartItemId) {
+		jdbcTemplate.update(
+			"insert into folder_items (id, folder_id, cart_item_id, created_at) values (?, ?, ?, now())",
+			id, folderId, cartItemId);
+	}
+
+	@Test
+	@DisplayName("폴더 목록을 폴더별 자료 수와 함께 조회하고, 자료가 없는 폴더는 0개로 조회한다")
+	void getFoldersWithItemCount() {
+		insertFolder(1, 1, "자기소개서", "2026-01-01 00:00:00");
+		insertFolder(2, 1, "빈폴더", "2026-01-02 00:00:00");
+		insertFolderItem(1, 1, 1);
+		insertFolderItem(2, 1, 2);
+
+		List<FolderResponse> folders = folderService.getFolders(1L);
+
+		assertThat(folders).containsExactly(
+			new FolderResponse(1L, "자기소개서", 2L),
+			new FolderResponse(2L, "빈폴더", 0L));
+	}
+
+	@Test
+	@DisplayName("폴더 목록은 생성순으로 정렬된다")
+	void getFoldersOrderByCreatedAt() {
+		insertFolder(1, 1, "나중폴더", "2026-01-03 00:00:00");
+		insertFolder(2, 1, "먼저폴더", "2026-01-01 00:00:00");
+
+		List<FolderResponse> folders = folderService.getFolders(1L);
+
+		assertThat(folders).extracting(FolderResponse::name)
+			.containsExactly("먼저폴더", "나중폴더");
+	}
+
+	@Test
+	@DisplayName("다른 사용자의 폴더는 조회되지 않는다")
+	void getFoldersOnlyOwn() {
+		insertFolder(1, 1, "내폴더", "2026-01-01 00:00:00");
+		insertFolder(2, 2, "남의폴더", "2026-01-01 00:00:00");
+		insertFolderItem(1, 2, 3);
+
+		List<FolderResponse> folders = folderService.getFolders(1L);
+
+		assertThat(folders).containsExactly(new FolderResponse(1L, "내폴더", 0L));
+	}
+
+	@Test
+	@DisplayName("폴더가 없으면 빈 목록을 반환한다")
+	void getFoldersEmpty() {
+		assertThat(folderService.getFolders(1L)).isEmpty();
+		assertThat(folderService.getFolders(999L)).isEmpty();
+	}
+}
