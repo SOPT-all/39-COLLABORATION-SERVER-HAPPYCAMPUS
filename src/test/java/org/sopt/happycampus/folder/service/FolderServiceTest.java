@@ -51,10 +51,11 @@ class FolderServiceTest {
 			id, userId, name, createdAt, createdAt);
 	}
 
-	private void insertFolderItem(long id, long folderId, long cartItemId) {
+	// folder_items는 서비스가 새 행을 만드는 테이블이라 ID를 직접 넣지 않는다 (H2 자동 증가 번호와 충돌 방지)
+	private void insertFolderItem(long folderId, long cartItemId) {
 		jdbcTemplate.update(
-			"insert into folder_items (id, folder_id, cart_item_id, created_at) values (?, ?, ?, now())",
-			id, folderId, cartItemId);
+			"insert into folder_items (folder_id, cart_item_id, created_at) values (?, ?, now())",
+			folderId, cartItemId);
 	}
 
 	@Test
@@ -62,8 +63,8 @@ class FolderServiceTest {
 	void getFoldersWithItemCount() {
 		insertFolder(1, 1, "자기소개서", "2026-01-01 00:00:00");
 		insertFolder(2, 1, "빈폴더", "2026-01-02 00:00:00");
-		insertFolderItem(1, 1, 1);
-		insertFolderItem(2, 1, 2);
+		insertFolderItem(1, 1);
+		insertFolderItem(1, 2);
 
 		List<FolderResponse> folders = folderService.getFolders(1L);
 
@@ -89,7 +90,7 @@ class FolderServiceTest {
 	void getFoldersOnlyOwn() {
 		insertFolder(1, 1, "내폴더", "2026-01-01 00:00:00");
 		insertFolder(2, 2, "남의폴더", "2026-01-01 00:00:00");
-		insertFolderItem(1, 2, 3);
+		insertFolderItem(2, 3);
 
 		List<FolderResponse> folders = folderService.getFolders(1L);
 
@@ -185,7 +186,7 @@ class FolderServiceTest {
 	void moveCartItemToAnotherFolder() {
 		insertFolder(1, 1, "A", "2026-01-01 00:00:00");
 		insertFolder(2, 1, "B", "2026-01-02 00:00:00");
-		insertFolderItem(1, 1, 1);
+		insertFolderItem(1, 1);
 
 		addCartItems(1, 2, 1L);
 
@@ -195,10 +196,26 @@ class FolderServiceTest {
 	}
 
 	@Test
+	@DisplayName("한 요청에서 새로 추가할 항목과 다른 폴더에서 옮길 항목을 함께 처리한다")
+	void addAndMoveInOneRequest() {
+		insertFolder(1, 1, "A", "2026-01-01 00:00:00");
+		insertFolder(2, 1, "B", "2026-01-02 00:00:00");
+		insertFolderItem(1, 1);
+
+		addCartItems(1, 2, 1L, 2L);
+
+		assertThat(folderIdOf(1)).isEqualTo(2L);
+		assertThat(folderIdOf(2)).isEqualTo(2L);
+		assertThat(folderService.getFolders(1L)).containsExactly(
+			new FolderResponse(1L, "A", 0L),
+			new FolderResponse(2L, "B", 2L));
+	}
+
+	@Test
 	@DisplayName("이미 같은 폴더에 있는 항목을 다시 추가해도 그대로 하나만 있다")
 	void addCartItemAlreadyInSameFolder() {
 		insertFolder(1, 1, "A", "2026-01-01 00:00:00");
-		insertFolderItem(1, 1, 1);
+		insertFolderItem(1, 1);
 
 		addCartItems(1, 1, 1L);
 
@@ -233,7 +250,7 @@ class FolderServiceTest {
 	void addCartItemsPartiallyMissing() {
 		insertFolder(1, 1, "A", "2026-01-01 00:00:00");
 		insertFolder(2, 1, "B", "2026-01-02 00:00:00");
-		insertFolderItem(1, 1, 1);
+		insertFolderItem(1, 1);
 
 		assertThatThrownBy(() -> addCartItems(1, 2, 1L, 999L))
 			.isInstanceOf(CartItemNotFoundException.class);

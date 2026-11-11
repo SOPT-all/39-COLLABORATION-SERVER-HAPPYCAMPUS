@@ -72,6 +72,13 @@ class CartItemServiceTest {
 	}
 
 	@Test
+	@DisplayName("ID 목록이 null이거나 비어 있으면 빈 목록을 반환한다")
+	void getCartItemsEmpty() {
+		assertThat(cartItemService.getCartItems(1L, null)).isEmpty();
+		assertThat(cartItemService.getCartItems(1L, List.of())).isEmpty();
+	}
+
+	@Test
 	@DisplayName("없는 항목이나 다른 사용자의 항목이 하나라도 있으면 CartItemNotFoundException이 발생한다")
 	void getCartItemsNotFound() {
 		assertThatThrownBy(() -> cartItemService.getCartItems(1L, List.of(1L, 999L)))
