@@ -14,6 +14,7 @@ import org.sopt.happycampus.folder.dto.response.CreateFolderResponse;
 import org.sopt.happycampus.folder.dto.response.FolderResponse;
 import org.sopt.happycampus.folder.entity.FolderEntity;
 import org.sopt.happycampus.folder.entity.FolderItemEntity;
+import org.sopt.happycampus.folder.exception.FolderItemConflictException;
 import org.sopt.happycampus.folder.exception.FolderNameDuplicatedException;
 import org.sopt.happycampus.folder.exception.FolderNotFoundException;
 import org.sopt.happycampus.folder.repository.FolderItemRepository;
@@ -60,6 +61,7 @@ public class FolderService {
 	 * 장바구니 항목들을 폴더에 넣는다.
 	 * 폴더에 없던 항목은 새로 연결하고, 이미 다른 폴더에 있던 항목은 이 폴더로 옮긴다 (한 항목은 한 폴더에만).
 	 * 폴더나 장바구니 항목 중 하나라도 없거나 다른 사용자 소유면 아무것도 바꾸지 않고 404.
+	 * 같은 항목을 동시에 처리하는 요청(더블클릭 등)과 겹쳐 DB 제약에 걸리면 500 대신 409.
 	 */
 	@Transactional
 	public void addCartItemsToFolder(Long userId, Long folderId, AddCartItemsToFolderRequest request) {
@@ -81,6 +83,11 @@ public class FolderService {
 				existing.moveTo(folder);
 			}
 		}
-		folderItemRepository.saveAll(newFolderItems);
+		try {
+			folderItemRepository.saveAllAndFlush(newFolderItems);
+		} catch (DataIntegrityViolationException e) {
+			// 동시 요청이 먼저 같은 장바구니 항목을 연결했거나(UNIQUE), 그 사이 항목이 삭제된 경우(FK)
+			throw new FolderItemConflictException();
+		}
 	}
 }
