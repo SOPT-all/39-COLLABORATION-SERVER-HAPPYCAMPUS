@@ -7,6 +7,7 @@ import org.sopt.happycampus.folder.dto.response.CreateFolderResponse;
 import org.sopt.happycampus.folder.dto.response.FolderResponse;
 import org.sopt.happycampus.folder.entity.FolderEntity;
 import org.sopt.happycampus.folder.exception.FolderNameDuplicatedException;
+import org.sopt.happycampus.folder.exception.FolderNotFoundException;
 import org.sopt.happycampus.folder.repository.FolderRepository;
 import org.sopt.happycampus.user.entity.UserEntity;
 import org.sopt.happycampus.user.service.UserService;
@@ -42,5 +43,11 @@ public class FolderService {
 			// 동시에 같은 이름으로 생성 요청이 들어와 유니크 제약에 걸린 경우
 			throw new FolderNameDuplicatedException();
 		}
+	}
+
+	public void validateFolderExists(Long folderId, Long userId) {
+		if (!folderRepository.existsByIdAndUserId(folderId, userId)) {
+			throw new FolderNotFoundException();
+		};
 	}
 }

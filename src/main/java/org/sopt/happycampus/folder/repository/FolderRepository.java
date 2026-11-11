@@ -21,4 +21,6 @@ public interface FolderRepository extends JpaRepository<FolderEntity, Long> {
 	List<FolderResponse> findAllWithItemCountByUserId(@Param("userId") Long userId);
 
 	boolean existsByUserIdAndName(Long userId, String name);
+
+	boolean existsByIdAndUserId(Long id, Long userId);
 }
