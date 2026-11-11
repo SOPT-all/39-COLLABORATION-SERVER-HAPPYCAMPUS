@@ -7,6 +7,7 @@ import org.sopt.happycampus.post.code.PostSuccessCode;
 import org.sopt.happycampus.post.dto.PostDetailResponse;
 import org.sopt.happycampus.post.entity.PostEntity;
 import org.sopt.happycampus.post.service.PostService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -31,16 +32,14 @@ public class PostController {
      * @return 자료 상세 정보가 포함된 공통 성공 응답
      */
     @GetMapping("/{postId}")
-    public SuccessResponse<PostDetailResponse> getPostDetail(
+    public ResponseEntity<SuccessResponse<PostDetailResponse>> getPostDetail(
             @PathVariable("postId") Long postId
     ) {
         PostEntity post = postService.findPostById(postId);
         PostDetailResponse response = PostDetailResponse.from(post);
 
-        return ApiResponse.success(
-                PostSuccessCode.POST_DETAIL_FOUND,
-                response
-        );
+        return ResponseEntity.status(PostSuccessCode.POST_DETAIL_FOUND.getStatus())
+                .body(ApiResponse.success(PostSuccessCode.POST_DETAIL_FOUND, response));
     }
 }
 
