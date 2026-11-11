@@ -1,11 +1,18 @@
 package org.sopt.happycampus.cart.service;
 
 import org.sopt.happycampus.cart.entity.CartItemEntity;
+import org.sopt.happycampus.cart.exception.CartItemDuplicatedException;
 import org.sopt.happycampus.cart.exception.CartItemNotFoundException;
 import org.sopt.happycampus.cart.repository.CartItemRepository;
 import org.sopt.happycampus.folder.repository.FolderItemRepository;
+import org.sopt.happycampus.post.entity.PostEntity;
+import org.sopt.happycampus.post.service.PostService;
+import org.sopt.happycampus.user.entity.UserEntity;
+import org.sopt.happycampus.user.service.UserService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.hibernate.exception.ConstraintViolationException;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import lombok.RequiredArgsConstructor;
 
@@ -15,11 +22,75 @@ public class CartItemService {
 	private final CartItemRepository cartItemRepository;
 	private final FolderItemRepository folderItemRepository;
 
+	/**
+	 * 장바구니를 사용할 사용자의 존재여부를 확인하는 Service
+	 */
+	private final UserService userService;
+
+	/**
+	 * 장바구니에 담을 자료의 존재 여부를 확인하는 Service
+	 */
+	private final PostService postService;
+
 	@Transactional
 	public void deleteCartItem(Long userId, Long cartItemId) {
 		CartItemEntity cartItem =  cartItemRepository.findByIdAndUserId(cartItemId, userId).orElseThrow(CartItemNotFoundException::new);
 
 		folderItemRepository.deleteByCartItemId(cartItemId);
 		cartItemRepository.delete(cartItem);
+	}
+
+	/**
+	 * 사용자 장바구니에 자료를 추가한다.
+	 *
+	 * 사용자 확인 → 자료 확인 → 중복 확인 → 항목 생성 → DB 저장
+	 * @param userId 사용자 ID
+	 * @param postId 추가할 자료 ID
+	 * @return 저장된 장바구니 항목
+	 * @throws CartItemDuplicatedException 이미 담긴 자료인 경우
+	 */
+	@Transactional
+	public CartItemEntity addCartItem(Long userId, Long postId) {
+		UserEntity user = userService.getUser(userId);
+		PostEntity post = postService.findPostById(postId);
+
+		if (cartItemRepository.existsByUserIdAndPostId(userId, postId)) {
+			throw new CartItemDuplicatedException();
+		}
+
+		CartItemEntity cartItem = CartItemEntity.create(user, post);
+
+		try {
+			return cartItemRepository.saveAndFlush(cartItem);
+		} catch (DataIntegrityViolationException e) {
+			if (isCartItemDuplicate(e)) {
+				throw new CartItemDuplicatedException();
+			}
+			throw e;
+		}
+	}
+
+	/**
+	 * 예외 원인을 확인해 장바구니 중복 제약 위반인지 판단
+	 *
+	 * @param exception 저장 중 발생한 예외
+	 * @return 장바구니 중복 제약 위반이면 true
+	 */
+	private boolean isCartItemDuplicate(Throwable exception) {
+		Throwable cause = exception;
+
+		while (cause != null) {
+			if (cause instanceof ConstraintViolationException violation) {
+				String name = violation.getConstraintName();
+
+				return name != null
+						&& (name.equals("uk_cart_items_user_post")
+						|| name.endsWith(".uk_cart_items_user_post"));
+			}
+
+			cause = cause.getCause();
+		}
+
+		return false;
 	}
 }
