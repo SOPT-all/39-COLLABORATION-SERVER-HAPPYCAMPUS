@@ -8,10 +8,13 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.sopt.happycampus.cart.exception.CartItemNotFoundException;
+import org.sopt.happycampus.folder.dto.request.AddCartItemsToFolderRequest;
 import org.sopt.happycampus.folder.dto.request.CreateFolderRequest;
 import org.sopt.happycampus.folder.dto.response.CreateFolderResponse;
 import org.sopt.happycampus.folder.dto.response.FolderResponse;
 import org.sopt.happycampus.folder.exception.FolderNameDuplicatedException;
+import org.sopt.happycampus.folder.exception.FolderNotFoundException;
 import org.sopt.happycampus.user.exception.UserNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -153,5 +156,87 @@ class FolderServiceTest {
 		assertThatThrownBy(() -> folderService.createFolder(999L, new CreateFolderRequest("자기소개서")))
 			.isInstanceOf(UserNotFoundException.class);
 		assertThat(jdbcTemplate.queryForObject("select count(*) from folders", Integer.class)).isZero();
+	}
+
+	private Long folderIdOf(long cartItemId) {
+		List<Long> folderIds = jdbcTemplate.queryForList(
+			"select folder_id from folder_items where cart_item_id = ?", Long.class, cartItemId);
+		return folderIds.isEmpty() ? null : folderIds.get(0);
+	}
+
+	private void addCartItems(long userId, long folderId, Long... cartItemIds) {
+		folderService.addCartItemsToFolder(userId, folderId, new AddCartItemsToFolderRequest(List.of(cartItemIds)));
+	}
+
+	@Test
+	@DisplayName("폴더에 없던 장바구니 항목을 추가하고, 중복 ID는 한 번만 추가한다")
+	void addCartItemsToFolder() {
+		insertFolder(1, 1, "A", "2026-01-01 00:00:00");
+
+		addCartItems(1, 1, 1L, 2L, 2L);
+
+		assertThat(folderIdOf(1)).isEqualTo(1L);
+		assertThat(folderIdOf(2)).isEqualTo(1L);
+		assertThat(folderService.getFolders(1L)).containsExactly(new FolderResponse(1L, "A", 2L));
+	}
+
+	@Test
+	@DisplayName("이미 다른 폴더에 있는 항목은 요청한 폴더로 이동한다")
+	void moveCartItemToAnotherFolder() {
+		insertFolder(1, 1, "A", "2026-01-01 00:00:00");
+		insertFolder(2, 1, "B", "2026-01-02 00:00:00");
+		insertFolderItem(1, 1, 1);
+
+		addCartItems(1, 2, 1L);
+
+		assertThat(folderIdOf(1)).isEqualTo(2L);
+		assertThat(jdbcTemplate.queryForObject(
+			"select count(*) from folder_items where cart_item_id = 1", Integer.class)).isEqualTo(1);
+	}
+
+	@Test
+	@DisplayName("이미 같은 폴더에 있는 항목을 다시 추가해도 그대로 하나만 있다")
+	void addCartItemAlreadyInSameFolder() {
+		insertFolder(1, 1, "A", "2026-01-01 00:00:00");
+		insertFolderItem(1, 1, 1);
+
+		addCartItems(1, 1, 1L);
+
+		assertThat(folderService.getFolders(1L)).containsExactly(new FolderResponse(1L, "A", 1L));
+	}
+
+	@Test
+	@DisplayName("없는 폴더나 다른 사용자의 폴더면 FolderNotFoundException이 발생한다")
+	void addCartItemsFolderNotFound() {
+		insertFolder(1, 2, "남의폴더", "2026-01-01 00:00:00");
+
+		assertThatThrownBy(() -> addCartItems(1, 1, 1L))
+			.isInstanceOf(FolderNotFoundException.class);
+		assertThatThrownBy(() -> addCartItems(1, 999, 1L))
+			.isInstanceOf(FolderNotFoundException.class);
+		assertThat(folderIdOf(1)).isNull();
+	}
+
+	@Test
+	@DisplayName("다른 사용자의 장바구니 항목이면 CartItemNotFoundException이 발생하고 아무것도 추가되지 않는다")
+	void addOtherUsersCartItem() {
+		insertFolder(1, 1, "A", "2026-01-01 00:00:00");
+
+		assertThatThrownBy(() -> addCartItems(1, 1, 1L, 3L))
+			.isInstanceOf(CartItemNotFoundException.class);
+		assertThat(folderIdOf(1)).isNull();
+		assertThat(folderIdOf(3)).isNull();
+	}
+
+	@Test
+	@DisplayName("요청 중 하나라도 없는 항목이 있으면 기존 폴더 위치도 바뀌지 않는다")
+	void addCartItemsPartiallyMissing() {
+		insertFolder(1, 1, "A", "2026-01-01 00:00:00");
+		insertFolder(2, 1, "B", "2026-01-02 00:00:00");
+		insertFolderItem(1, 1, 1);
+
+		assertThatThrownBy(() -> addCartItems(1, 2, 1L, 999L))
+			.isInstanceOf(CartItemNotFoundException.class);
+		assertThat(folderIdOf(1)).isEqualTo(1L);
 	}
 }
