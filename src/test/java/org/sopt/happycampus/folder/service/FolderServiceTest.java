@@ -8,10 +8,13 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.sopt.happycampus.cart.exception.CartItemNotFoundException;
+import org.sopt.happycampus.folder.dto.request.AddCartItemsToFolderRequest;
 import org.sopt.happycampus.folder.dto.request.CreateFolderRequest;
 import org.sopt.happycampus.folder.dto.response.CreateFolderResponse;
 import org.sopt.happycampus.folder.dto.response.FolderResponse;
 import org.sopt.happycampus.folder.exception.FolderNameDuplicatedException;
+import org.sopt.happycampus.folder.exception.FolderNotFoundException;
 import org.sopt.happycampus.user.exception.UserNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -48,10 +51,11 @@ class FolderServiceTest {
 			id, userId, name, createdAt, createdAt);
 	}
 
-	private void insertFolderItem(long id, long folderId, long cartItemId) {
+	// folder_items는 서비스가 새 행을 만드는 테이블이라 ID를 직접 넣지 않는다 (H2 자동 증가 번호와 충돌 방지)
+	private void insertFolderItem(long folderId, long cartItemId) {
 		jdbcTemplate.update(
-			"insert into folder_items (id, folder_id, cart_item_id, created_at) values (?, ?, ?, now())",
-			id, folderId, cartItemId);
+			"insert into folder_items (folder_id, cart_item_id, created_at) values (?, ?, now())",
+			folderId, cartItemId);
 	}
 
 	@Test
@@ -59,8 +63,8 @@ class FolderServiceTest {
 	void getFoldersWithItemCount() {
 		insertFolder(1, 1, "자기소개서", "2026-01-01 00:00:00");
 		insertFolder(2, 1, "빈폴더", "2026-01-02 00:00:00");
-		insertFolderItem(1, 1, 1);
-		insertFolderItem(2, 1, 2);
+		insertFolderItem(1, 1);
+		insertFolderItem(1, 2);
 
 		List<FolderResponse> folders = folderService.getFolders(1L);
 
@@ -86,7 +90,7 @@ class FolderServiceTest {
 	void getFoldersOnlyOwn() {
 		insertFolder(1, 1, "내폴더", "2026-01-01 00:00:00");
 		insertFolder(2, 2, "남의폴더", "2026-01-01 00:00:00");
-		insertFolderItem(1, 2, 3);
+		insertFolderItem(2, 3);
 
 		List<FolderResponse> folders = folderService.getFolders(1L);
 
@@ -153,5 +157,100 @@ class FolderServiceTest {
 		assertThatThrownBy(() -> folderService.createFolder(999L, new CreateFolderRequest("자기소개서")))
 			.isInstanceOf(UserNotFoundException.class);
 		assertThat(jdbcTemplate.queryForObject("select count(*) from folders", Integer.class)).isZero();
+	}
+
+	private List<Long> folderIdsOf(long cartItemId) {
+		return jdbcTemplate.queryForList(
+			"select folder_id from folder_items where cart_item_id = ? order by folder_id", Long.class, cartItemId);
+	}
+
+	private void addCartItems(long userId, long folderId, Long... cartItemIds) {
+		folderService.addCartItemsToFolder(userId, folderId, new AddCartItemsToFolderRequest(List.of(cartItemIds)));
+	}
+
+	@Test
+	@DisplayName("폴더에 없던 장바구니 항목을 추가하고, 중복 ID는 한 번만 추가한다")
+	void addCartItemsToFolder() {
+		insertFolder(1, 1, "A", "2026-01-01 00:00:00");
+
+		addCartItems(1, 1, 1L, 2L, 2L);
+
+		assertThat(folderIdsOf(1)).containsExactly(1L);
+		assertThat(folderIdsOf(2)).containsExactly(1L);
+		assertThat(folderService.getFolders(1L)).containsExactly(new FolderResponse(1L, "A", 2L));
+	}
+
+	@Test
+	@DisplayName("이미 다른 폴더에 있는 항목을 추가하면 기존 폴더에도 남고 요청한 폴더에도 담긴다")
+	void addCartItemToAnotherFolderKeepsExisting() {
+		insertFolder(1, 1, "A", "2026-01-01 00:00:00");
+		insertFolder(2, 1, "B", "2026-01-02 00:00:00");
+		insertFolderItem(1, 1);
+
+		addCartItems(1, 2, 1L);
+
+		assertThat(folderIdsOf(1)).containsExactly(1L, 2L);
+	}
+
+	@Test
+	@DisplayName("한 요청에서 새 항목과 다른 폴더에 있던 항목을 함께 담으면 둘 다 요청한 폴더에 추가된다")
+	void addNewAndExistingInOneRequest() {
+		insertFolder(1, 1, "A", "2026-01-01 00:00:00");
+		insertFolder(2, 1, "B", "2026-01-02 00:00:00");
+		insertFolderItem(1, 1);
+
+		addCartItems(1, 2, 1L, 2L);
+
+		assertThat(folderIdsOf(1)).containsExactly(1L, 2L);
+		assertThat(folderIdsOf(2)).containsExactly(2L);
+		assertThat(folderService.getFolders(1L)).containsExactly(
+			new FolderResponse(1L, "A", 1L),
+			new FolderResponse(2L, "B", 2L));
+	}
+
+	@Test
+	@DisplayName("이미 같은 폴더에 있는 항목을 다시 추가해도 그대로 하나만 있다")
+	void addCartItemAlreadyInSameFolder() {
+		insertFolder(1, 1, "A", "2026-01-01 00:00:00");
+		insertFolderItem(1, 1);
+
+		addCartItems(1, 1, 1L);
+
+		assertThat(folderService.getFolders(1L)).containsExactly(new FolderResponse(1L, "A", 1L));
+	}
+
+	@Test
+	@DisplayName("없는 폴더나 다른 사용자의 폴더면 FolderNotFoundException이 발생한다")
+	void addCartItemsFolderNotFound() {
+		insertFolder(1, 2, "남의폴더", "2026-01-01 00:00:00");
+
+		assertThatThrownBy(() -> addCartItems(1, 1, 1L))
+			.isInstanceOf(FolderNotFoundException.class);
+		assertThatThrownBy(() -> addCartItems(1, 999, 1L))
+			.isInstanceOf(FolderNotFoundException.class);
+		assertThat(folderIdsOf(1)).isEmpty();
+	}
+
+	@Test
+	@DisplayName("다른 사용자의 장바구니 항목이면 CartItemNotFoundException이 발생하고 아무것도 추가되지 않는다")
+	void addOtherUsersCartItem() {
+		insertFolder(1, 1, "A", "2026-01-01 00:00:00");
+
+		assertThatThrownBy(() -> addCartItems(1, 1, 1L, 3L))
+			.isInstanceOf(CartItemNotFoundException.class);
+		assertThat(folderIdsOf(1)).isEmpty();
+		assertThat(folderIdsOf(3)).isEmpty();
+	}
+
+	@Test
+	@DisplayName("요청 중 하나라도 없는 항목이 있으면 아무 폴더에도 추가되지 않는다")
+	void addCartItemsPartiallyMissing() {
+		insertFolder(1, 1, "A", "2026-01-01 00:00:00");
+		insertFolder(2, 1, "B", "2026-01-02 00:00:00");
+		insertFolderItem(1, 1);
+
+		assertThatThrownBy(() -> addCartItems(1, 2, 1L, 999L))
+			.isInstanceOf(CartItemNotFoundException.class);
+		assertThat(folderIdsOf(1)).containsExactly(1L);
 	}
 }

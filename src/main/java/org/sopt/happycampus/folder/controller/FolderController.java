@@ -5,6 +5,7 @@ import java.util.List;
 import org.sopt.happycampus.common.response.ApiResponse;
 import org.sopt.happycampus.common.response.SuccessResponse;
 import org.sopt.happycampus.folder.code.SuccessCode;
+import org.sopt.happycampus.folder.dto.request.AddCartItemsToFolderRequest;
 import org.sopt.happycampus.folder.dto.request.CreateFolderRequest;
 import org.sopt.happycampus.folder.dto.response.CreateFolderResponse;
 import org.sopt.happycampus.folder.dto.response.FolderResponse;
@@ -46,5 +47,17 @@ public class FolderController implements FolderControllerDocs {
 
 		return ResponseEntity.status(HttpStatus.CREATED)
 			.body(ApiResponse.success(SuccessCode.FOLDER_CREATED, folder));
+	}
+
+	@PostMapping(path = "/users/{userId}/folders/{folderId}/cart-items")
+	public ResponseEntity<SuccessResponse<Void>> addCartItemsToFolder(
+		@PathVariable(name = "userId") Long userId,
+		@PathVariable(name = "folderId") Long folderId,
+		@Valid @RequestBody AddCartItemsToFolderRequest request) {
+
+		folderService.addCartItemsToFolder(userId, folderId, request);
+
+		return ResponseEntity.status(HttpStatus.OK)
+			.body(ApiResponse.success(SuccessCode.CART_ITEMS_ADDED_TO_FOLDER));
 	}
 }
