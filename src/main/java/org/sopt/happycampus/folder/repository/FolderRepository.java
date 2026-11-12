@@ -1,6 +1,7 @@
 package org.sopt.happycampus.folder.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.sopt.happycampus.folder.dto.response.FolderResponse;
 import org.sopt.happycampus.folder.entity.FolderEntity;
@@ -23,4 +24,6 @@ public interface FolderRepository extends JpaRepository<FolderEntity, Long> {
 	boolean existsByUserIdAndName(Long userId, String name);
 
 	boolean existsByIdAndUserId(Long id, Long userId);
+         
+	Optional<FolderEntity> findByIdAndUserId(Long folderId, Long userId);
 }

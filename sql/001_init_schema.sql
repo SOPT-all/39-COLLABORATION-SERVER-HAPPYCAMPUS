@@ -97,7 +97,7 @@ CREATE TABLE folders (
 
 /*
  * 폴더에 포함된 장바구니 자료.
- * FolderItemEntity에 따라 하나의 장바구니 항목은 하나의 폴더에만 포함된다.
+ * 하나의 장바구니 항목은 여러 폴더에 담을 수 있고, 같은 폴더에는 한 번만 담긴다.
  * 실행 전 cart_items 테이블이 먼저 생성되어야 한다.
  */
 CREATE TABLE folder_items (
@@ -108,8 +108,8 @@ CREATE TABLE folder_items (
 
     PRIMARY KEY (id),
 
-    CONSTRAINT uk_folder_items_cart_item
-        UNIQUE (cart_item_id),
+    CONSTRAINT uk_folder_items_folder_cart_item
+        UNIQUE (folder_id, cart_item_id),
 
     CONSTRAINT fk_folder_items_folder
         FOREIGN KEY (folder_id) REFERENCES folders (id),
