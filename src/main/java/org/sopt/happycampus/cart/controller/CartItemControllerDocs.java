@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -42,7 +43,7 @@ public interface CartItemControllerDocs {
 	ResponseEntity<SuccessResponse<AddCartItemResponse>> addCartItem(
 			@Parameter(description = "사용자 ID", example = "1")
 			@PathVariable("userId") Long userId,
-			@RequestBody AddCartItemRequest request
+			@Valid @RequestBody AddCartItemRequest request
 	);
 }
 
