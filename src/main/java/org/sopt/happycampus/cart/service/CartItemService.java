@@ -1,5 +1,6 @@
 package org.sopt.happycampus.cart.service;
 
+import org.sopt.happycampus.cart.dto.response.CartItemResponse;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -10,6 +11,14 @@ import org.sopt.happycampus.cart.exception.CartItemDuplicatedException;
 import org.sopt.happycampus.cart.exception.CartItemNotFoundException;
 import org.sopt.happycampus.cart.repository.CartItemRepository;
 import org.sopt.happycampus.folder.repository.FolderItemRepository;
+import org.sopt.happycampus.folder.service.FolderService;
+import org.sopt.happycampus.post.entity.PostCategory;
+import org.sopt.happycampus.user.repository.UserRepository;
+import org.sopt.happycampus.user.service.UserService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.sopt.happycampus.post.entity.PostEntity;
 import org.sopt.happycampus.post.service.PostService;
 import org.sopt.happycampus.user.entity.UserEntity;
@@ -26,16 +35,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class CartItemService {
 	private final CartItemRepository cartItemRepository;
-	private final FolderItemService folderItemService;
-
-	/**
-	 * 장바구니를 사용할 사용자의 존재여부를 확인하는 Service
-	 */
 	private final UserService userService;
-
-	/**
-	 * 장바구니에 담을 자료의 존재 여부를 확인하는 Service
-	 */
+	private final FolderItemService folderItemService;
 	private final PostService postService;
 
 	@Transactional
@@ -46,6 +47,18 @@ public class CartItemService {
 		cartItemRepository.delete(cartItem);
 	}
 
+	@Transactional(readOnly = true)
+	public Page<CartItemResponse> getCartItems(Long userId, Integer page, Integer size, PostCategory category, Long folderId) {
+		userService.validateUserExists(userId);
+		if (folderId != null) {
+			folderItemService.validateFolderExists(folderId, userId);
+		}
+
+		Pageable pageable = PageRequest.of(page, size);
+		Page<CartItemEntity> cartItems = cartItemRepository.getCartItemsBySearchOption(pageable, userId, category, folderId);
+
+		return cartItems.map(CartItemResponse::from);
+  }
 	/**
 	 * 사용자 장바구니에 자료를 추가한다.
 	 *

@@ -8,7 +8,7 @@ import org.sopt.happycampus.cart.entity.CartItemEntity;
 import org.sopt.happycampus.post.service.PostService;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface CartItemRepository extends JpaRepository<CartItemEntity, Long> {
+public interface CartItemRepository extends JpaRepository<CartItemEntity, Long>, CartItemRepositoryCustom {
 	Optional<CartItemEntity> findByIdAndUserId(Long cartItemId, Long userId);
 
 	/**
