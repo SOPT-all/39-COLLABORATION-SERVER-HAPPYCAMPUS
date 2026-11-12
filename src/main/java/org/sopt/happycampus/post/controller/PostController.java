@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/posts")
 @RequiredArgsConstructor
-public class PostController {
+public class PostController implements PostControllerDocs{
 
     /**
      * 자료 조회 비즈니스 로직을 처리하는 Service.
