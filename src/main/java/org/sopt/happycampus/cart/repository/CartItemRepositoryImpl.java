@@ -20,13 +20,9 @@ import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 
 @Repository
-public class CartItemRepositoryImpl extends QuerydslRepositorySupport implements CartItemRepositoryCustom {
+public class CartItemRepositoryImpl implements CartItemRepositoryCustom {
 	@Autowired
 	private JPAQueryFactory queryFactory;
-
-	public CartItemRepositoryImpl() {
-		super(CartItemEntity.class);
-	}
 
 	@Override
 	public Page<CartItemEntity> getCartItemsBySearchOption(Pageable pageable, Long userId, PostCategory category, Long folderId) {
