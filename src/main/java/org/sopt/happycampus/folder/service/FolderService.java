@@ -55,11 +55,6 @@ public class FolderService {
 		}
 	}
 
-	public void validateFolderExists(Long folderId, Long userId) {
-		if (!folderRepository.existsByIdAndUserId(folderId, userId)) {
-			throw new FolderNotFoundException();
-		};
-  }
 	/**
 	 * 장바구니 항목들을 폴더에 넣는다.
 	 * 한 항목은 여러 폴더에 담을 수 있고, 다른 폴더에 있던 연결은 그대로 둔다. 이미 이 폴더에 있는 항목은 건너뛴다.

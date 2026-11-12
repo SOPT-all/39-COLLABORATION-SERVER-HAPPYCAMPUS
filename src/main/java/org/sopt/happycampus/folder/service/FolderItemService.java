@@ -1,6 +1,8 @@
 package org.sopt.happycampus.folder.service;
 
+import org.sopt.happycampus.folder.exception.FolderNotFoundException;
 import org.sopt.happycampus.folder.repository.FolderItemRepository;
+import org.sopt.happycampus.folder.repository.FolderRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,10 +16,17 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class FolderItemService {
 	private final FolderItemRepository folderItemRepository;
+	private final FolderRepository folderRepository;
 
 	// 장바구니 항목이 삭제될 때, 그 항목의 폴더 연결도 함께 삭제한다
 	@Transactional
 	public void deleteByCartItemId(Long cartItemId) {
 		folderItemRepository.deleteByCartItemId(cartItemId);
+	}
+
+	public void validateFolderExists(Long folderId, Long userId) {
+		if (!folderRepository.existsByIdAndUserId(folderId, userId)) {
+			throw new FolderNotFoundException();
+		};
 	}
 }

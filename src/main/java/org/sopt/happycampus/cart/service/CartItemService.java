@@ -35,9 +35,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class CartItemService {
 	private final CartItemRepository cartItemRepository;
-	private final FolderItemRepository folderItemRepository;
 	private final UserService userService;
-	private final FolderService folderService;
 	private final FolderItemService folderItemService;
 	private final PostService postService;
 
@@ -53,7 +51,7 @@ public class CartItemService {
 	public Page<CartItemResponse> getCartItems(Long userId, Integer page, Integer size, PostCategory category, Long folderId) {
 		userService.validateUserExists(userId);
 		if (folderId != null) {
-			folderService.validateFolderExists(folderId, userId);
+			folderItemService.validateFolderExists(folderId, userId);
 		}
 
 		Pageable pageable = PageRequest.of(page, size);
