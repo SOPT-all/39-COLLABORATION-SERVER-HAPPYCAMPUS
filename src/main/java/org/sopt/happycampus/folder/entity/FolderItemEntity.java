@@ -20,7 +20,10 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(
 	name = "folder_items",
-	uniqueConstraints = @UniqueConstraint(name = "uk_folder_items_cart_item", columnNames = {"cart_item_id"})
+	uniqueConstraints = @UniqueConstraint(
+		name = "uk_folder_items_folder_cart_item",
+		columnNames = {"folder_id", "cart_item_id"}
+	)
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class FolderItemEntity extends BaseEntity {
@@ -43,9 +46,5 @@ public class FolderItemEntity extends BaseEntity {
 
 	public static FolderItemEntity create(FolderEntity folder, CartItemEntity cartItem) {
 		return new FolderItemEntity(folder, cartItem);
-	}
-
-	public void moveTo(FolderEntity folder) {
-		this.folder = folder;
 	}
 }

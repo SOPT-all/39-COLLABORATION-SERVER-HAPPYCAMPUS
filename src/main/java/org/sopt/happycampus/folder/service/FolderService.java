@@ -1,9 +1,7 @@
 package org.sopt.happycampus.folder.service;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.sopt.happycampus.cart.entity.CartItemEntity;
@@ -59,7 +57,7 @@ public class FolderService {
 
 	/**
 	 * 장바구니 항목들을 폴더에 넣는다.
-	 * 폴더에 없던 항목은 새로 연결하고, 이미 다른 폴더에 있던 항목은 이 폴더로 옮긴다 (한 항목은 한 폴더에만).
+	 * 한 항목은 여러 폴더에 담을 수 있고, 다른 폴더에 있던 연결은 그대로 둔다. 이미 이 폴더에 있는 항목은 건너뛴다.
 	 * 폴더나 장바구니 항목 중 하나라도 없거나 다른 사용자 소유면 아무것도 바꾸지 않고 404.
 	 * 같은 항목을 동시에 처리하는 요청(더블클릭 등)과 겹쳐 DB 제약에 걸리면 500 대신 409.
 	 */
@@ -69,24 +67,20 @@ public class FolderService {
 			.orElseThrow(FolderNotFoundException::new);
 		List<CartItemEntity> cartItems = cartItemService.getCartItems(userId, request.cartItemIds());
 
-		Map<Long, FolderItemEntity> existingByCartItemId = folderItemRepository
-			.findAllByCartItemIdIn(cartItems.stream().map(CartItemEntity::getId).toList())
+		Set<Long> alreadyInFolder = folderItemRepository
+			.findAllByFolderIdAndCartItemIdIn(folderId, cartItems.stream().map(CartItemEntity::getId).toList())
 			.stream()
-			.collect(Collectors.toMap(folderItem -> folderItem.getCartItem().getId(), Function.identity()));
+			.map(folderItem -> folderItem.getCartItem().getId())
+			.collect(Collectors.toSet());
 
-		List<FolderItemEntity> newFolderItems = new ArrayList<>();
-		for (CartItemEntity cartItem : cartItems) {
-			FolderItemEntity existing = existingByCartItemId.get(cartItem.getId());
-			if (existing == null) {
-				newFolderItems.add(FolderItemEntity.create(folder, cartItem));
-			} else {
-				existing.moveTo(folder);
-			}
-		}
+		List<FolderItemEntity> newFolderItems = cartItems.stream()
+			.filter(cartItem -> !alreadyInFolder.contains(cartItem.getId()))
+			.map(cartItem -> FolderItemEntity.create(folder, cartItem))
+			.toList();
 		try {
 			folderItemRepository.saveAllAndFlush(newFolderItems);
 		} catch (DataIntegrityViolationException e) {
-			// 동시 요청이 먼저 같은 장바구니 항목을 연결했거나(UNIQUE), 그 사이 항목이 삭제된 경우(FK)
+			// 동시 요청이 먼저 같은 폴더에 같은 항목을 연결했거나(UNIQUE), 그 사이 항목이 삭제된 경우(FK)
 			throw new FolderItemConflictException();
 		}
 	}

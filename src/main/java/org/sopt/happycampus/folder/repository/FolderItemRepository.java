@@ -10,5 +10,5 @@ public interface FolderItemRepository extends JpaRepository<FolderItemEntity, Lo
 
 	void deleteByCartItemId(Long cartItemId);
 
-	List<FolderItemEntity> findAllByCartItemIdIn(Collection<Long> cartItemIds);
+	List<FolderItemEntity> findAllByFolderIdAndCartItemIdIn(Long folderId, Collection<Long> cartItemIds);
 }

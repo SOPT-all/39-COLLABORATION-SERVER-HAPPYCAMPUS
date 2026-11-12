@@ -159,10 +159,9 @@ class FolderServiceTest {
 		assertThat(jdbcTemplate.queryForObject("select count(*) from folders", Integer.class)).isZero();
 	}
 
-	private Long folderIdOf(long cartItemId) {
-		List<Long> folderIds = jdbcTemplate.queryForList(
-			"select folder_id from folder_items where cart_item_id = ?", Long.class, cartItemId);
-		return folderIds.isEmpty() ? null : folderIds.get(0);
+	private List<Long> folderIdsOf(long cartItemId) {
+		return jdbcTemplate.queryForList(
+			"select folder_id from folder_items where cart_item_id = ? order by folder_id", Long.class, cartItemId);
 	}
 
 	private void addCartItems(long userId, long folderId, Long... cartItemIds) {
@@ -176,38 +175,36 @@ class FolderServiceTest {
 
 		addCartItems(1, 1, 1L, 2L, 2L);
 
-		assertThat(folderIdOf(1)).isEqualTo(1L);
-		assertThat(folderIdOf(2)).isEqualTo(1L);
+		assertThat(folderIdsOf(1)).containsExactly(1L);
+		assertThat(folderIdsOf(2)).containsExactly(1L);
 		assertThat(folderService.getFolders(1L)).containsExactly(new FolderResponse(1L, "A", 2L));
 	}
 
 	@Test
-	@DisplayName("이미 다른 폴더에 있는 항목은 요청한 폴더로 이동한다")
-	void moveCartItemToAnotherFolder() {
+	@DisplayName("이미 다른 폴더에 있는 항목을 추가하면 기존 폴더에도 남고 요청한 폴더에도 담긴다")
+	void addCartItemToAnotherFolderKeepsExisting() {
 		insertFolder(1, 1, "A", "2026-01-01 00:00:00");
 		insertFolder(2, 1, "B", "2026-01-02 00:00:00");
 		insertFolderItem(1, 1);
 
 		addCartItems(1, 2, 1L);
 
-		assertThat(folderIdOf(1)).isEqualTo(2L);
-		assertThat(jdbcTemplate.queryForObject(
-			"select count(*) from folder_items where cart_item_id = 1", Integer.class)).isEqualTo(1);
+		assertThat(folderIdsOf(1)).containsExactly(1L, 2L);
 	}
 
 	@Test
-	@DisplayName("한 요청에서 새로 추가할 항목과 다른 폴더에서 옮길 항목을 함께 처리한다")
-	void addAndMoveInOneRequest() {
+	@DisplayName("한 요청에서 새 항목과 다른 폴더에 있던 항목을 함께 담으면 둘 다 요청한 폴더에 추가된다")
+	void addNewAndExistingInOneRequest() {
 		insertFolder(1, 1, "A", "2026-01-01 00:00:00");
 		insertFolder(2, 1, "B", "2026-01-02 00:00:00");
 		insertFolderItem(1, 1);
 
 		addCartItems(1, 2, 1L, 2L);
 
-		assertThat(folderIdOf(1)).isEqualTo(2L);
-		assertThat(folderIdOf(2)).isEqualTo(2L);
+		assertThat(folderIdsOf(1)).containsExactly(1L, 2L);
+		assertThat(folderIdsOf(2)).containsExactly(2L);
 		assertThat(folderService.getFolders(1L)).containsExactly(
-			new FolderResponse(1L, "A", 0L),
+			new FolderResponse(1L, "A", 1L),
 			new FolderResponse(2L, "B", 2L));
 	}
 
@@ -231,7 +228,7 @@ class FolderServiceTest {
 			.isInstanceOf(FolderNotFoundException.class);
 		assertThatThrownBy(() -> addCartItems(1, 999, 1L))
 			.isInstanceOf(FolderNotFoundException.class);
-		assertThat(folderIdOf(1)).isNull();
+		assertThat(folderIdsOf(1)).isEmpty();
 	}
 
 	@Test
@@ -241,12 +238,12 @@ class FolderServiceTest {
 
 		assertThatThrownBy(() -> addCartItems(1, 1, 1L, 3L))
 			.isInstanceOf(CartItemNotFoundException.class);
-		assertThat(folderIdOf(1)).isNull();
-		assertThat(folderIdOf(3)).isNull();
+		assertThat(folderIdsOf(1)).isEmpty();
+		assertThat(folderIdsOf(3)).isEmpty();
 	}
 
 	@Test
-	@DisplayName("요청 중 하나라도 없는 항목이 있으면 기존 폴더 위치도 바뀌지 않는다")
+	@DisplayName("요청 중 하나라도 없는 항목이 있으면 아무 폴더에도 추가되지 않는다")
 	void addCartItemsPartiallyMissing() {
 		insertFolder(1, 1, "A", "2026-01-01 00:00:00");
 		insertFolder(2, 1, "B", "2026-01-02 00:00:00");
@@ -254,6 +251,6 @@ class FolderServiceTest {
 
 		assertThatThrownBy(() -> addCartItems(1, 2, 1L, 999L))
 			.isInstanceOf(CartItemNotFoundException.class);
-		assertThat(folderIdOf(1)).isEqualTo(1L);
+		assertThat(folderIdsOf(1)).containsExactly(1L);
 	}
 }

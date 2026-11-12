@@ -27,7 +27,7 @@ public interface FolderControllerDocs {
 		@Parameter(description = "사용자 ID", example = "1") @PathVariable(name = "userId") Long userId,
 		@Valid @RequestBody CreateFolderRequest request);
 
-	@Operation(summary = "폴더에 자료 추가", description = "장바구니 항목들을 폴더에 넣습니다. 이미 다른 폴더에 있는 항목은 이 폴더로 이동합니다. "
+	@Operation(summary = "폴더에 자료 추가", description = "장바구니 항목들을 폴더에 넣습니다. 한 항목은 여러 폴더에 담을 수 있고, 이미 이 폴더에 있는 항목은 건너뜁니다. "
 		+ "폴더나 장바구니 항목 중 하나라도 없거나 다른 사용자 소유면 아무것도 바뀌지 않고 404를 반환합니다.")
 	ResponseEntity<SuccessResponse<Void>> addCartItemsToFolder(
 		@Parameter(description = "사용자 ID", example = "1") @PathVariable(name = "userId") Long userId,
