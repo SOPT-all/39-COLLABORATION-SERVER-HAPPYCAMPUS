@@ -56,6 +56,18 @@ class CartItemServiceTest {
 	}
 
 	@Test
+	@DisplayName("여러 폴더에 담긴 장바구니 자료를 삭제하면 모든 폴더 연결이 삭제되고 폴더는 남는다")
+	void deleteCartItemInMultipleFolders() {
+		jdbcTemplate.update("insert into folders (id, user_id, name, created_at, updated_at) values (2, 1, '폴더2', now(), now())");
+		jdbcTemplate.update("insert into folder_items (id, folder_id, cart_item_id, created_at) values (2, 2, 1, now())");
+
+		cartItemService.deleteCartItem(1L, 1L);
+
+		assertThat(count("select count(*) from folder_items where cart_item_id = 1")).isZero();
+		assertThat(count("select count(*) from folders where id in (1, 2)")).isEqualTo(2);
+	}
+
+	@Test
 	@DisplayName("폴더에 없는 장바구니 자료도 삭제된다")
 	void deleteCartItemWithoutFolder() {
 		cartItemService.deleteCartItem(1L, 2L);
