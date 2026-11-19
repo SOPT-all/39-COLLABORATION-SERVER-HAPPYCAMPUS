@@ -39,6 +39,21 @@ public class CartItemService {
 	private final FolderItemService folderItemService;
 	private final PostService postService;
 
+	/**
+	 * 사용자가 담아 둔 자료의 장바구니 항목 ID를 조회한다.
+	 *
+	 * @param userId 조회 사용자 ID (존재하는 사용자여야 한다)
+	 * @param postId 조회할 자료 ID
+	 * @return 사용자의 장바구니 항목 ID, 담기지 않은 자료이면 null
+	 */
+	@Transactional(readOnly = true)
+	public Long findCartItemId(Long userId, Long postId) {
+		userService.validateUserExists(userId);
+		return cartItemRepository.findByUserIdAndPostId(userId, postId)
+			.map(CartItemEntity::getId)
+			.orElse(null);
+	}
+
 	@Transactional
 	public void deleteCartItem(Long userId, Long cartItemId) {
 		CartItemEntity cartItem =  cartItemRepository.findByIdAndUserId(cartItemId, userId).orElseThrow(CartItemNotFoundException::new);
