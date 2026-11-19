@@ -2,6 +2,9 @@ package org.sopt.happycampus.post.dto;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import org.sopt.happycampus.post.entity.PostCategory;
 import org.sopt.happycampus.post.entity.PostEntity;
 import org.sopt.happycampus.post.entity.PostImageEntity;
@@ -21,6 +24,7 @@ import org.sopt.happycampus.post.entity.PostImageEntity;
  * @param tableOfContents 목차
  * @param content 자료 본문
  * @param imageUrls 자료 이미지 URL 목록
+ * @param cartItemId 조회 사용자의 장바구니 항목 ID (사용자 미지정 또는 미담기 시 null)
  */
 public record PostDetailResponse (
         Long postId,
@@ -34,15 +38,20 @@ public record PostDetailResponse (
         Integer pageCount,
         String tableOfContents,
         String content,
-        List<String> imageUrls
+        List<String> imageUrls,
+        @JsonInclude(JsonInclude.Include.ALWAYS)
+        @Schema(description = "조회 사용자의 장바구니 항목 ID. userId 생략 또는 미담기 시 null",
+                example = "42", types = {"integer", "null"}, format = "int64")
+        Long cartItemId
 ) {
     /**
      * 자료 Entity를 상세 조회 응답으로 변환한다
      *
      * @param post 조회한 자료
+     * @param cartItemId 사용자의 장바구니 항목 ID, 없으면 null
      * @return 자료 상세 응답
      */
-    public static PostDetailResponse from(PostEntity post) {
+    public static PostDetailResponse from(PostEntity post, Long cartItemId) {
         return new PostDetailResponse(
                 post.getId(),
                 post.getCategory(),
@@ -55,7 +64,8 @@ public record PostDetailResponse (
                 post.getPageCount(),
                 post.getTableOfContents(),
                 post.getContent(),
-                post.getImages().stream().map(PostImageEntity::getImageUrl).toList()
+                post.getImages().stream().map(PostImageEntity::getImageUrl).toList(),
+                cartItemId
         );
     }
 }
