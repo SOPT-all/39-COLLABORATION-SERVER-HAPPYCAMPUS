@@ -42,7 +42,8 @@ public record PostDetailResponse (
         @JsonInclude(JsonInclude.Include.ALWAYS)
         @Schema(description = "조회 사용자의 장바구니 항목 ID. userId 생략 또는 미담기 시 null",
                 example = "42", types = {"integer", "null"}, format = "int64")
-        Long cartItemId
+        Long cartItemId,
+        String tag
 ) {
     /**
      * 자료 Entity를 상세 조회 응답으로 변환한다
@@ -53,19 +54,20 @@ public record PostDetailResponse (
      */
     public static PostDetailResponse from(PostEntity post, Long cartItemId) {
         return new PostDetailResponse(
-                post.getId(),
-                post.getCategory(),
-                post.getTitle(),
-                post.getDescription(),
-                post.getPrice(),
-                post.getCoverImageUrl(),
-                post.getSavedYear(),
-                post.getFileType(),
-                post.getPageCount(),
-                post.getTableOfContents(),
-                post.getContent(),
-                post.getImages().stream().map(PostImageEntity::getImageUrl).toList(),
-                cartItemId
+            post.getId(),
+            post.getCategory(),
+            post.getTitle(),
+            post.getDescription(),
+            post.getPrice(),
+            post.getCoverImageUrl(),
+            post.getSavedYear(),
+            post.getFileType(),
+            post.getPageCount(),
+            post.getTableOfContents(),
+            post.getContent(),
+            post.getImages().stream().map(PostImageEntity::getImageUrl).toList(),
+            cartItemId,
+            post.getTag()
         );
     }
 }

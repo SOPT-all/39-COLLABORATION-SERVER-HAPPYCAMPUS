@@ -57,4 +57,6 @@ public class PostEntity extends BaseTimeEntity {
 
 	@OneToMany(mappedBy = "post")
 	private List<PostImageEntity> images = new ArrayList<>();
+
+	private String tag;
 }
