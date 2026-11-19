@@ -13,7 +13,8 @@ public record CartItemResponse(
 	Integer savedYear,
 	Integer pageCount,
 	String fileType,
-	String tableOfContents
+	String tableOfContents,
+	String category
 ) {
 	public static CartItemResponse from(CartItemEntity cartItemEntity) {
 		PostEntity postEntity = cartItemEntity.getPost();
@@ -27,7 +28,8 @@ public record CartItemResponse(
 			postEntity.getSavedYear(),
 			postEntity.getPageCount(),
 			postEntity.getFileType(),
-			postEntity.getTableOfContents()
+			postEntity.getTableOfContents(),
+			postEntity.getCategory().name()
 		);
 	}
 }
