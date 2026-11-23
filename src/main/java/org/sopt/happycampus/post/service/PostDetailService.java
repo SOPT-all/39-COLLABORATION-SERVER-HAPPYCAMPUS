@@ -1,7 +1,11 @@
 package org.sopt.happycampus.post.service;
 
+import java.util.List;
+
 import lombok.RequiredArgsConstructor;
 import org.sopt.happycampus.cart.service.CartItemService;
+import org.sopt.happycampus.folder.dto.response.FolderSummaryResponse;
+import org.sopt.happycampus.folder.service.FolderItemService;
 import org.sopt.happycampus.post.dto.PostDetailResponse;
 import org.sopt.happycampus.post.entity.PostEntity;
 import org.springframework.stereotype.Service;
@@ -16,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class PostDetailService {
     private final PostService postService;
     private final CartItemService cartItemService;
+    private final FolderItemService folderItemService;
 
     /**
      * 자료와 이미지, 조회 사용자의 장바구니 항목 ID를 하나의 읽기 트랜잭션에서 조회한다.
@@ -28,7 +33,10 @@ public class PostDetailService {
     public PostDetailResponse getPostDetail(Long postId, Long userId) {
         PostEntity post = postService.findPostById(postId);
         Long cartItemId = userId == null ? null : cartItemService.findCartItemId(userId, postId);
+		List<FolderSummaryResponse> folders = cartItemId == null
+            ? List.of()
+            : folderItemService.findFoldersByCartItemId(cartItemId);
 
-        return PostDetailResponse.from(post, cartItemId);
+        return PostDetailResponse.from(post, cartItemId, folders);
     }
 }

@@ -5,6 +5,7 @@ import java.util.List;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 
+import org.sopt.happycampus.folder.dto.response.FolderSummaryResponse;
 import org.sopt.happycampus.post.entity.PostCategory;
 import org.sopt.happycampus.post.entity.PostEntity;
 import org.sopt.happycampus.post.entity.PostImageEntity;
@@ -43,7 +44,8 @@ public record PostDetailResponse (
         @Schema(description = "조회 사용자의 장바구니 항목 ID. userId 생략 또는 미담기 시 null",
                 example = "42", types = {"integer", "null"}, format = "int64")
         Long cartItemId,
-        String tag
+        String tag,
+        List<FolderSummaryResponse> folders
 ) {
     /**
      * 자료 Entity를 상세 조회 응답으로 변환한다
@@ -52,7 +54,7 @@ public record PostDetailResponse (
      * @param cartItemId 사용자의 장바구니 항목 ID, 없으면 null
      * @return 자료 상세 응답
      */
-    public static PostDetailResponse from(PostEntity post, Long cartItemId) {
+    public static PostDetailResponse from(PostEntity post, Long cartItemId, List<FolderSummaryResponse> folders) {
         return new PostDetailResponse(
             post.getId(),
             post.getCategory(),
@@ -67,7 +69,8 @@ public record PostDetailResponse (
             post.getContent(),
             post.getImages().stream().map(PostImageEntity::getImageUrl).toList(),
             cartItemId,
-            post.getTag()
+            post.getTag(),
+            folders
         );
     }
 }

@@ -5,6 +5,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.sopt.happycampus.cart.entity.CartItemEntity;
+import org.sopt.happycampus.cart.exception.CartItemNotFoundException;
 import org.sopt.happycampus.cart.service.CartItemService;
 import org.sopt.happycampus.folder.dto.request.AddCartItemsToFolderRequest;
 import org.sopt.happycampus.folder.dto.request.CreateFolderRequest;
@@ -13,11 +14,13 @@ import org.sopt.happycampus.folder.dto.response.FolderResponse;
 import org.sopt.happycampus.folder.entity.FolderEntity;
 import org.sopt.happycampus.folder.entity.FolderItemEntity;
 import org.sopt.happycampus.folder.exception.FolderItemConflictException;
+import org.sopt.happycampus.folder.exception.FolderItemNotFoundException;
 import org.sopt.happycampus.folder.exception.FolderNameDuplicatedException;
 import org.sopt.happycampus.folder.exception.FolderNotFoundException;
 import org.sopt.happycampus.folder.repository.FolderItemRepository;
 import org.sopt.happycampus.folder.repository.FolderRepository;
 import org.sopt.happycampus.user.entity.UserEntity;
+import org.sopt.happycampus.user.exception.UserNotFoundException;
 import org.sopt.happycampus.user.service.UserService;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -83,5 +86,23 @@ public class FolderService {
 			// 동시 요청이 먼저 같은 폴더에 같은 항목을 연결했거나(UNIQUE), 그 사이 항목이 삭제된 경우(FK)
 			throw new FolderItemConflictException();
 		}
+	}
+
+	@Transactional
+	public void deleteCartItemFromFolder(Long userId, Long folderId, Long cartItemId) {
+		if (!userService.existsUser(userId)) {
+			throw new UserNotFoundException();
+		}
+		if (!folderRepository.existsByIdAndUserId(folderId, userId)) {
+			throw new FolderNotFoundException();
+		}
+		if (!cartItemService.existsCartItem(userId, cartItemId)) {
+			throw new CartItemNotFoundException();
+		};
+
+		FolderItemEntity folderItem = folderItemRepository.findByFolderIdAndCartItemId(folderId, cartItemId)
+			.orElseThrow(FolderItemNotFoundException::new);
+
+		folderItemRepository.delete(folderItem);
 	}
 }

@@ -141,4 +141,9 @@ public class CartItemService {
 		}
 		return cartItems;
 	}
+
+	@Transactional(readOnly = true)
+	public boolean existsCartItem(Long userId, Long cartItemId) {
+		return cartItemRepository.existsByIdAndUserId(cartItemId, userId);
+	}
 }
