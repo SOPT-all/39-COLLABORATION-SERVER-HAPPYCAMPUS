@@ -33,4 +33,10 @@ public interface FolderControllerDocs {
 		@Parameter(description = "사용자 ID", example = "1") @PathVariable(name = "userId") Long userId,
 		@Parameter(description = "폴더 ID", example = "1") @PathVariable(name = "folderId") Long folderId,
 		@Valid @RequestBody AddCartItemsToFolderRequest request);
+
+	@Operation(summary = "폴더에서 자료 삭제", description = "지정한 폴더에서 장바구니 자료를 제거합니다. 자료는 장바구니에 그대로 남습니다.")
+	ResponseEntity<SuccessResponse<Void>> deleteCartItemFromFolder(
+		@Parameter(description = "사용자 ID", example = "1") @PathVariable(name = "userId") Long userId,
+		@Parameter(description = "폴더 ID", example = "1") @PathVariable(name = "folderId") Long folderId,
+		@Parameter(description = "장바구니 항목 ID", example = "1") @PathVariable(name = "cartItemId") Long cartItemId);
 }
