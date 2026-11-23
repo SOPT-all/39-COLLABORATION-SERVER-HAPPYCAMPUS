@@ -24,4 +24,8 @@ public class UserService {
 			throw new UserNotFoundException();
 		}
 	}
+
+	public boolean existsUser(Long userId) {
+		return userRepository.existsById(userId);
+	}
 }

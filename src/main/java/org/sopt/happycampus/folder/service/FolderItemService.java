@@ -1,5 +1,8 @@
 package org.sopt.happycampus.folder.service;
 
+import java.util.List;
+
+import org.sopt.happycampus.folder.dto.response.FolderSummaryResponse;
 import org.sopt.happycampus.folder.exception.FolderNotFoundException;
 import org.sopt.happycampus.folder.repository.FolderItemRepository;
 import org.sopt.happycampus.folder.repository.FolderRepository;
@@ -28,5 +31,13 @@ public class FolderItemService {
 		if (!folderRepository.existsByIdAndUserId(folderId, userId)) {
 			throw new FolderNotFoundException();
 		};
+	}
+
+	@Transactional(readOnly = true)
+	public List<FolderSummaryResponse> findFoldersByCartItemId(Long cartItemId) {
+		return folderItemRepository.findAllByCartItemId(cartItemId).stream()
+			.map(item -> item.getFolder())
+			.map(folder -> new FolderSummaryResponse(folder.getId(), folder.getName()))
+			.toList();
 	}
 }

@@ -12,6 +12,7 @@ import org.sopt.happycampus.folder.dto.response.FolderResponse;
 import org.sopt.happycampus.folder.service.FolderService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -59,5 +60,17 @@ public class FolderController implements FolderControllerDocs {
 
 		return ResponseEntity.status(HttpStatus.OK)
 			.body(ApiResponse.success(SuccessCode.CART_ITEMS_ADDED_TO_FOLDER));
+	}
+
+	@DeleteMapping(path = "/users/{userId}/folders/{folderId}/cart-items/{cartItemId}")
+	public ResponseEntity<SuccessResponse<Void>> deleteCartItemFromFolder(
+		@PathVariable(name = "userId") Long userId,
+		@PathVariable(name = "folderId") Long folderId,
+		@PathVariable(name = "cartItemId") Long cartItemId
+	) {
+		folderService.deleteCartItemFromFolder(userId, folderId, cartItemId);
+
+		return ResponseEntity.status(HttpStatus.OK)
+			.body(ApiResponse.success(SuccessCode.CART_ITEM_DELETED_FROM_FOLDER));
 	}
 }

@@ -4,7 +4,9 @@ import java.util.List;
 import java.util.Optional;
 
 import org.sopt.happycampus.folder.dto.response.FolderResponse;
+import org.sopt.happycampus.folder.dto.response.FolderSummaryResponse;
 import org.sopt.happycampus.folder.entity.FolderEntity;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
