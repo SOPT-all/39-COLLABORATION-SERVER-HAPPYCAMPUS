@@ -13,7 +13,8 @@ public class CorsConfig implements WebMvcConfigurer {
 			.allowedOrigins(
 				"http://localhost:3000",
 				"http://localhost:5173",
-				"https://39-collaboration-web-happycampus.vercel.app"
+				"https://39-collaboration-web-happycampus.vercel.app",
+				"https://sopt39happycampus.p-e.kr"
 			)
 			.allowedMethods("*")
 			.allowedHeaders("*")
